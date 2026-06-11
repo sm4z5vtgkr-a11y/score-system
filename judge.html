@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>评委打分</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:#f5f0f0; font-family:'Microsoft YaHei','PingFang SC',sans-serif; min-height:100vh; }
+
+.header { background:linear-gradient(135deg,#8b0020,#c0152a); padding:16px 20px 24px; text-align:center; position:relative; overflow:hidden; }
+.header::after { content:''; position:absolute; bottom:-1px; left:0; width:100%; height:20px; background:#f5f0f0; border-radius:20px 20px 0 0; }
+.header-school { font-size:11px; color:rgba(255,220,220,0.7); letter-spacing:2px; margin-bottom:4px; }
+.header-event { font-size:14px; color:#fff; font-weight:700; letter-spacing:1px; margin-bottom:2px; }
+.header-performer { font-size:13px; color:rgba(255,220,220,0.85); margin-bottom:6px; font-weight:500; }
+.judge-badge { display:inline-block; padding:3px 14px; border-radius:20px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); font-size:11px; color:rgba(255,240,240,0.9); letter-spacing:1px; }
+
+.body { padding:16px; }
+
+/* 总分展示 */
+.total-card { background:#fff; border-radius:14px; padding:14px 20px; margin-bottom:14px; box-shadow:0 2px 12px rgba(180,20,40,0.08); display:flex; align-items:center; justify-content:space-between; }
+.total-label { font-size:13px; color:#888; letter-spacing:1px; }
+.total-num { font-size:52px; font-weight:700; color:#c0152a; line-height:1; }
+.total-max { font-size:12px; color:#bbb; margin-top:2px; text-align:right; }
+
+/* 评分维度 */
+.dim-card { background:#fff; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(180,20,40,0.06); }
+.dim-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.dim-name { font-size:15px; font-weight:700; color:#333; }
+.dim-score-display { font-size:28px; font-weight:700; color:#c0152a; }
+.dim-max { font-size:12px; color:#bbb; }
+.dim-desc { font-size:11px; color:#aaa; margin-bottom:10px; line-height:1.5; }
+
+input[type=range] {
+  width:100%; height:6px; appearance:none; border-radius:3px; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb { appearance:none; width:24px; height:24px; border-radius:50%; background:#c0152a; border:3px solid #fff; box-shadow:0 2px 6px rgba(180,20,40,0.3); }
+
+.slider-ticks { display:flex; justify-content:space-between; font-size:10px; color:#ccc; margin-top:4px; padding:0 2px; }
+
+/* 快捷按钮 */
+.quick-row { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.qb { padding:5px 10px; font-size:12px; border-radius:6px; border:1px solid #e8d0d0; background:#fdf8f8; color:#666; cursor:pointer; transition:all .15s; }
+.qb:active, .qb.sel { background:#c0152a; border-color:#c0152a; color:#fff; }
+
+/* 标准提示 */
+.criteria-card { background:#fff8f8; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #f0d0d0; }
+.criteria-title { font-size:12px; font-weight:700; color:#c0152a; letter-spacing:2px; margin-bottom:8px; }
+.criteria-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; font-size:11px; color:#666; line-height:1.5; }
+.criteria-tag { flex-shrink:0; padding:2px 6px; border-radius:4px; background:#fce8e8; color:#c0152a; font-weight:700; font-size:10px; }
+
+.submit-btn { width:100%; padding:15px; font-size:17px; font-weight:700; border-radius:14px; border:none; cursor:pointer; background:linear-gradient(135deg,#8b0020,#c0152a); color:#fff; letter-spacing:3px; box-shadow:0 4px 16px rgba(180,20,40,0.3); transition:all .2s; margin-bottom:16px; }
+.submit-btn:active { transform:scale(.97); }
+.submit-btn:disabled { opacity:.4; cursor:default; }
+
+.submitted { display:none; text-align:center; padding:30px 20px; background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(180,20,40,0.08); }
+.sub-icon { font-size:48px; color:#c0152a; margin-bottom:8px; }
+.sub-title { font-size:18px; font-weight:700; color:#333; margin-bottom:6px; }
+.sub-breakdown { font-size:13px; color:#999; line-height:1.8; margin-bottom:6px; }
+.sub-total { font-size:36px; font-weight:700; color:#c0152a; }
+.sub-sub { font-size:12px; color:#bbb; margin-top:4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-school">广东亚视演艺职业学院</div>
+  <div class="header-event">全国第八届大学生艺术展演（声乐）</div>
+  <div class="header-performer" id="hPerformer">等待开始…</div>
+  <div class="judge-badge" id="judgeBadge">评委 — 号</div>
+</div>
+
+<div class="body">
+  <div id="scoreArea">
+    <!-- 总分 -->
+    <div class="total-card">
+      <div>
+        <div class="total-label">当前总分</div>
+        <div class="total-max" id="totalMax">满分 100 分</div>
+      </div>
+      <div class="total-num" id="totalNum">0</div>
+    </div>
+
+    <!-- 4个维度 -->
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-name">主题契合度</div>
+        <div><span class="dim-score-display" id="s1">15</span><span class="dim-max"> / 30</span></div>
+      </div>
+      <div class="dim-desc">作品贴合家国主题、立意积极正向、符合大艺展美育宗旨</div>
+      <input type="range" id="r1" min="0" max="30" value="15" step="1" oninput="onSlider(1,this.value)">
+      <div class="slider-ticks"><span>0</span><span>10</span><span>20</span><span>30</span></div>
+      <div class="quick-row">
+        <div class="qb" onclick="setDim(1,10)">10</div>
+        <div class="qb" onclick="setDim(1,15)">15</div>
+        <div class="qb" onclick="setDim(1,20)">20</div>
+        <div class="qb" onclick="setDim(1,25)">25</div>
+        <div class="qb" onclick="setDim(1,28)">28</div>
+        <div class="qb" onclick="setDim(1,30)">30</div>
+      </div>
+    </div>
+
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-name">演唱技巧</div>
+        <div><span class="dim-score-display" id="s2">20</span><span class="dim-max"> / 40</span></div>
+      </div>
+      <div class="dim-desc">音准节奏、气息控制、咬字吐字、音色质感、作品处理、艺术功底</div>
+      <input type="range" id="r2" min="0" max="40" value="20" step="1" oninput="onSlider(2,this.value)">
+      <div class="slider-ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span></div>
+      <div class="quick-row">
+        <div class="qb" onclick="setDim(2,20)">20</div>
+        <div class="qb" onclick="setDim(2,25)">25</div>
+        <div class="qb" onclick="setDim(2,30)">30</div>
+        <div class="qb" onclick="setDim(2,35)">35</div>
+        <div class="qb" onclick="setDim(2,38)">38</div>
+        <div class="qb" onclick="setDim(2,40)">40</div>
+      </div>
+    </div>
+
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-name">舞台表现力</div>
+        <div><span class="dim-score-display" id="s3">10</span><span class="dim-max"> / 20</span></div>
+      </div>
+      <div class="dim-desc">台风仪态、情感表达、队形编排、肢体表现、整体感染力</div>
+      <input type="range" id="r3" min="0" max="20" value="10" step="1" oninput="onSlider(3,this.value)">
+      <div class="slider-ticks"><span>0</span><span>5</span><span>10</span><span>15</span><span>20</span></div>
+      <div class="quick-row">
+        <div class="qb" onclick="setDim(3,10)">10</div>
+        <div class="qb" onclick="setDim(3,13)">13</div>
+        <div class="qb" onclick="setDim(3,15)">15</div>
+        <div class="qb" onclick="setDim(3,17)">17</div>
+        <div class="qb" onclick="setDim(3,19)">19</div>
+        <div class="qb" onclick="setDim(3,20)">20</div>
+      </div>
+    </div>
+
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-name">整体完整性</div>
+        <div><span class="dim-score-display" id="s4">5</span><span class="dim-max"> / 10</span></div>
+      </div>
+      <div class="dim-desc">节目流畅完整、衔接自然、无明显失误，伴奏配合默契</div>
+      <input type="range" id="r4" min="0" max="10" value="5" step="1" oninput="onSlider(4,this.value)">
+      <div class="slider-ticks"><span>0</span><span>3</span><span>5</span><span>7</span><span>10</span></div>
+      <div class="quick-row">
+        <div class="qb" onclick="setDim(4,5)">5</div>
+        <div class="qb" onclick="setDim(4,6)">6</div>
+        <div class="qb" onclick="setDim(4,7)">7</div>
+        <div class="qb" onclick="setDim(4,8)">8</div>
+        <div class="qb" onclick="setDim(4,9)">9</div>
+        <div class="qb" onclick="setDim(4,10)">10</div>
+      </div>
+    </div>
+
+    <!-- 评分标准 -->
+    <div class="criteria-card">
+      <div class="criteria-title">评分标准参考</div>
+      <div class="criteria-row"><span class="criteria-tag">主题 30</span><span>作品贴合家国主题、立意积极正向</span></div>
+      <div class="criteria-row"><span class="criteria-tag">技巧 40</span><span>音准节奏、气息、咬字、音色、艺术功底</span></div>
+      <div class="criteria-row"><span class="criteria-tag">表现 20</span><span>台风仪态、情感表达、整体感染力</span></div>
+      <div class="criteria-row"><span class="criteria-tag">完整 10</span><span>节目流畅、无明显失误、伴奏配合</span></div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitScore()">提 交 评 分</button>
+  </div>
+
+  <div class="submitted" id="submittedArea">
+    <div class="sub-icon">✓</div>
+    <div class="sub-title">评分已提交</div>
+    <div class="sub-breakdown" id="subBreakdown"></div>
+    <div class="sub-total" id="subTotal"></div>
+    <div class="sub-sub">已实时同步到大屏</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://ttibitjqnlvzlzhghbwg.supabase.co';
+const SUPABASE_KEY='sb_publishable_ETIPKX3cLbH_LYLz9gTtxQ_QyPIiNKz';
+
+const params=new URLSearchParams(location.search);
+const judgeId=parseInt(params.get('judge'))||1;
+document.getElementById('judgeBadge').textContent=`评委 ${judgeId} 号`;
+
+let dims=[0,15,20,10,5]; // index 1-4
+let currentPerformer='', lastPerformer='';
+
+function updateTotal(){
+  const total=dims[1]+dims[2]+dims[3]+dims[4];
+  document.getElementById('totalNum').textContent=total;
+  return total;
+}
+
+function onSlider(i,val){
+  dims[i]=parseInt(val);
+  document.getElementById('s'+i).textContent=val;
+  updateSliderBg(i,val);
+  updateTotal();
+  updateQuickBtns(i);
+}
+
+function updateSliderBg(i,val){
+  const max=[0,30,40,20,10][i];
+  const pct=val/max*100;
+  const r=document.getElementById('r'+i);
+  r.style.background=`linear-gradient(90deg,#c0152a ${pct}%,#e0d0d0 ${pct}%)`;
+}
+
+function setDim(i,val){
+  dims[i]=val;
+  document.getElementById('s'+i).textContent=val;
+  document.getElementById('r'+i).value=val;
+  updateSliderBg(i,val);
+  updateTotal();
+  updateQuickBtns(i);
+}
+
+function updateQuickBtns(i){
+  const row=document.querySelectorAll(`.dim-card:nth-child(${i+1}) .qb`);
+  row.forEach(b=>b.classList.toggle('sel',parseInt(b.textContent)===dims[i]));
+}
+
+// 初始化滑块背景
+[1,2,3,4].forEach(i=>updateSliderBg(i,dims[i]));
+updateTotal();
+
+async function submitScore(){
+  if(!currentPerformer){alert('请等待主持人设置选手');return;}
+  const total=updateTotal();
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='提交中…';
+
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/scores?judge_id=eq.${judgeId}&performer=eq.${encodeURIComponent(currentPerformer)}`,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores`,{
+      method:'POST',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({judge_id:judgeId,performer:currentPerformer,score:total,d1:dims[1],d2:dims[2],d3:dims[3],d4:dims[4]})
+    });
+    if(r.ok||r.status===201){
+      document.getElementById('scoreArea').style.display='none';
+      document.getElementById('submittedArea').style.display='block';
+      document.getElementById('subBreakdown').innerHTML=`主题契合度：${dims[1]}分 &nbsp;|&nbsp; 演唱技巧：${dims[2]}分<br>舞台表现力：${dims[3]}分 &nbsp;|&nbsp; 整体完整性：${dims[4]}分`;
+      document.getElementById('subTotal').textContent=total+' 分';
+    } else {
+      btn.disabled=false; btn.textContent='提 交 评 分'; alert('提交失败，请重试');
+    }
+  }catch(e){
+    btn.disabled=false; btn.textContent='提 交 评 分'; alert('网络错误，请重试');
+  }
+}
+
+async function pollPerformer(){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/current_performer?select=*&limit=1`,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+    if(r.ok){
+      const d=await r.json();
+      if(d.length>0){
+        currentPerformer=d[0].name;
+        const label=d[0].name+(d[0].item?' · '+d[0].item:'');
+        document.getElementById('hPerformer').textContent=label;
+        if(currentPerformer!==lastPerformer&&lastPerformer!==''){
+          document.getElementById('scoreArea').style.display='block';
+          document.getElementById('submittedArea').style.display='none';
+          const btn=document.getElementById('submitBtn');
+          btn.disabled=false; btn.textContent='提 交 评 分';
+          [1,2,3,4].forEach(i=>setDim(i,[0,15,20,10,5][i]));
+        }
+        lastPerformer=currentPerformer;
+      }
+    }
+  }catch(e){}
+}
+
+pollPerformer();
+setInterval(pollPerformer,3000);
+</script>
+</body>
+</html>
